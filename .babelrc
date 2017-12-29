@@ -1,0 +1,5 @@
+{
+  "presets": ["react-native", "flow"],
+  "plugins": ["transform-runtime"],
+  "retainLines": true
+}
