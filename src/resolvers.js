@@ -5,7 +5,7 @@ import Pluralize from 'pluralize';
 import toCamelCase from 'camelcase';
 
 function resolverFuction(apiResolver: Function, rawUrl: string, parentType: string, type: string, fieldName: string) {
-  return async (parent, parameters) => {
+  return async (parent, parameters, context) => {
     return apiResolver({
       parent,
       parentType,
@@ -13,6 +13,7 @@ function resolverFuction(apiResolver: Function, rawUrl: string, parentType: stri
       rawUrl,
       fieldName,
       type,
+      context,
     });
   };
 }
