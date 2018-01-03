@@ -13,8 +13,8 @@ import {
   schemaFromMultiple,
 } from '../src/index';
 import SwaggerParser from '../src/swagger-parser';
-import blogSwaggerJson from '../src/example/data/api-blog.swagger';
-import accountSwaggerJson from '../src/example/data/api-account.swagger';
+import blogSwaggerJson from './example/data/api-blog.swagger';
+import accountSwaggerJson from './example/data/api-account.swagger';
 
 declare var describe: any;
 declare var it: any;
