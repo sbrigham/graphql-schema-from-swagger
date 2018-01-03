@@ -14,7 +14,7 @@ import {
   printSchema,
 } from 'graphql';
 
-import { type Entity } from './swagger-parser';
+import { type Entity, type PaginationStrategy } from './swagger-parser';
 
 import toCamelCase from 'camelcase';
 import Pluralize from 'pluralize';
@@ -41,10 +41,35 @@ function toPrimitiveType(type: string, isRequired: boolean = false) {
   }
 }
 
+// Note this only works if you have one reference in your schema
+function buildPagedListType(
+  arrayEntityName: string,
+  allGraphqlArguments: Object,
+  isRootQuery: boolean,
+  paginationStrategy: PaginationStrategy
+) {
+  return {
+    type: new GraphQLObjectType({
+      name: `${Pluralize(arrayEntityName)}Container`,
+      fields: {
+        totalItems: {
+          type: new GraphQLNonNull(GraphQLInt),
+        },
+        items: {
+          type: new GraphQLList(graph.type(arrayEntityName)),
+        },
+      },
+    }),
+    args:
+      allGraphqlArguments[arrayEntityName].list[isRootQuery ? 'root' : 'type'],
+  };
+}
+
 export function toGraphqlField(
   property: Object,
   allGraphqlArguments: Object,
-  isRootQuery: boolean = false
+  isRootQuery: boolean = false,
+  paginationStrategy?: PaginationStrategy
 ) {
   const {
     args = {},
@@ -105,7 +130,16 @@ export function toGraphqlField(
           type: new GraphQLList(toPrimitiveType(items.type)),
         };
       }
+
       const arrayEntityName = items.$ref.replace('#/definitions/', '');
+      if (paginationStrategy && paginationStrategy !== 'NONE') {
+        return buildPagedListType(
+          arrayEntityName,
+          allGraphqlArguments,
+          isRootQuery,
+          paginationStrategy
+        );
+      }
       return {
         type: new GraphQLList(graph.type(arrayEntityName)),
         args:
@@ -128,14 +162,16 @@ export function toGraphqlField(
 export function fieldsFromParameters(
   swaggerParameters: Array<Object>,
   allGraphqlArguments: Object = {},
-  isRootQuery: boolean = false
+  isRootQuery: boolean = false,
+  paginationStrategy?: PaginationStrategy
 ) {
   const fields = {};
   swaggerParameters.map(parameter => {
     fields[toCamelCase(parameter.name)] = toGraphqlField(
       parameter,
       allGraphqlArguments,
-      isRootQuery
+      isRootQuery,
+      paginationStrategy
     );
   });
   return fields;
@@ -162,7 +198,6 @@ export function generateArguments(
 
 export function generateTypeDefs(entities: Array<Entity>) {
   graph.clear();
-
   // Create inputs
   const graphQlArguments = entities.reduce((acc, entity) => {
     acc[entity.name] = {
@@ -217,7 +252,8 @@ export function generateTypeDefs(entities: Array<Entity>) {
           name: key,
         })),
         graphQlArguments,
-        false
+        false,
+        entity.paginationStrategy
       )
     );
   });
@@ -243,6 +279,5 @@ export function generateTypeDefs(entities: Array<Entity>) {
       return acc;
     }, {})
   );
-
   return graph.generate();
 }

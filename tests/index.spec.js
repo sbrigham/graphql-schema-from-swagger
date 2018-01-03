@@ -12,7 +12,6 @@ import {
   generateTypes,
   schemaFromMultiple,
 } from '../src/index';
-import { setVariablesOnUrl } from '../src/resolvers';
 import SwaggerParser from '../src/swagger-parser';
 import blogSwaggerJson from '../src/example/data/api-blog.swagger';
 import accountSwaggerJson from '../src/example/data/api-account.swagger';
@@ -22,16 +21,24 @@ declare var it: any;
 declare var expect: any;
 declare var jest: any;
 
-// Use a solid example schema
-// copy the useful versions of the same tests
-// export and unit test every function in typedefs, resolvers, swagger parser
-
 describe('Integration Tests', () => {
   describe('generate', () => {
     it('Has resolvers and typeDefs', () => {
       var result = generate(blogSwaggerJson, {
         apiResolver: () => {},
         listResultName: 'ListResult',
+      });
+      expect(result).toHaveProperty('resolvers');
+      expect(result).toHaveProperty('typeDefs');
+      expect(typeof result.typeDefs).toBe('string');
+      expect(typeof result.resolvers).toBe('object');
+    });
+
+    it('Should have a paginationStrategy', () => {
+      var result = generate(blogSwaggerJson, {
+        apiResolver: () => {},
+        listResultName: 'ListResult',
+        paginationStrategy: 'NONE',
       });
       expect(result).toHaveProperty('resolvers');
       expect(result).toHaveProperty('typeDefs');
@@ -68,94 +75,150 @@ describe('Integration Tests', () => {
   });
 
   describe('generateTypes', () => {
-    it('Should return a GraphqlSchema', () => {
-      expect(
-        typeof generateTypes(blogSwaggerJson, {
+    describe('No pagination strategy', () => {
+      it('Should return a GraphqlSchema', () => {
+        expect(
+          typeof generateTypes(blogSwaggerJson, {
+            listResultName: 'ListResult',
+            apiResolver: () => {},
+          })
+        ).toBe('object');
+        expect(
+          generateTypes(blogSwaggerJson, {
+            listResultName: 'ListResult',
+            apiResolver: () => {},
+          }).constructor.name
+        ).toBe('GraphQLSchema');
+      });
+
+      it('Should generate a root query type', () => {
+        const queryTypeFields = generateTypes(blogSwaggerJson, {
           listResultName: 'ListResult',
           apiResolver: () => {},
         })
-      ).toBe('object');
-      expect(
-        generateTypes(blogSwaggerJson, {
+          .getQueryType()
+          .getFields();
+        expect(typeof queryTypeFields.comment).toBe('object');
+        expect(typeof queryTypeFields.comments).toBe('object');
+        expect(typeof queryTypeFields.post).toBe('object');
+        expect(typeof queryTypeFields.posts).toBe('object');
+        expect(typeof queryTypeFields.blog).toBe('object');
+        expect(typeof queryTypeFields.blogs).toBe('object');
+      });
+
+      it('Should generate a root query type with arguments', () => {
+        const queryTypeFields = generateTypes(blogSwaggerJson, {
           listResultName: 'ListResult',
           apiResolver: () => {},
-        }).constructor.name
-      ).toBe('GraphQLSchema');
-    });
+        })
+          .getQueryType()
+          .getFields();
+        const commentsArguments = queryTypeFields.comments.args;
+        expect(commentsArguments.find(a => a.name === 'blogId').type).toEqual(
+          new GraphQLNonNull(GraphQLInt)
+        );
+        expect(commentsArguments.find(a => a.name === 'postId').type).toEqual(
+          new GraphQLNonNull(GraphQLInt)
+        );
+      });
 
-    it('Should generate a root query type', () => {
-      const queryTypeFields = generateTypes(blogSwaggerJson, {
-        listResultName: 'ListResult',
-        apiResolver: () => {},
-      })
-        .getQueryType()
+      it('Should generate types', () => {
+        const blogType = generateTypes(blogSwaggerJson, {
+          listResultName: 'ListResult',
+          apiResolver: () => {},
+        })
+          .getType('Blog')
+          .getFields();
+
+        expect(typeof blogType.id).toBe('object');
+        expect(typeof blogType.name).toBe('object');
+        expect(typeof blogType.createdOn).toBe('object');
+        expect(typeof blogType.updatedOn).toBe('object');
+        expect(typeof blogType.createdBy).toBe('object');
+        expect(typeof blogType.postCount).toBe('object');
+        expect(typeof blogType.posts).toBe('object');
+        expect(typeof blogType.deleted).toBe('object');
+      });
+
+      it('Should generate types with arguments', () => {
+        const blogType = generateTypes(blogSwaggerJson, {
+          listResultName: 'ListResult',
+          apiResolver: () => {},
+        })
+          .getType('Blog')
+          .getFields();
+
+        expect(blogType.posts.args.some(a => a.name === 'blogId')).toBe(true);
+        expect(blogType.posts.args.some(a => a.name === 'sinceId')).toBe(true);
+        expect(blogType.posts.args.some(a => a.name === 'maxId')).toBe(true);
+        expect(blogType.posts.args.some(a => a.name === 'count')).toBe(true);
+      });
+
+      it('Should not have any required arguments on type queries', () => {
+        const blogType = generateTypes(blogSwaggerJson, {
+          listResultName: 'ListResult',
+          apiResolver: () => {},
+        })
+        .getType('Blog')
         .getFields();
-      expect(typeof queryTypeFields.comment).toBe('object');
-      expect(typeof queryTypeFields.comments).toBe('object');
-      expect(typeof queryTypeFields.post).toBe('object');
-      expect(typeof queryTypeFields.posts).toBe('object');
-      expect(typeof queryTypeFields.blog).toBe('object');
-      expect(typeof queryTypeFields.blogs).toBe('object');
+
+        const postArguments = blogType.posts.args;
+        expect(postArguments.find(a => a.name === 'blogId').type).toBe(
+          GraphQLInt
+        );
+      });
     });
 
-    it('Should generate a root query type with arguments', () => {
-      const queryTypeFields = generateTypes(blogSwaggerJson, {
-        listResultName: 'ListResult',
-        apiResolver: () => {},
-      })
-        .getQueryType()
+    describe('Simple pagination strategy', () => {
+      it('Should generate types', () => {
+        const blogType = generateTypes(blogSwaggerJson, {
+          listResultName: 'ListResult',
+          apiResolver: () => {},
+          paginationStrategy: 'SIMPLE',
+        })
+        .getType('Blog')
         .getFields();
-      const commentsArguments = queryTypeFields.comments.args;
-      expect(commentsArguments.find(a => a.name === 'blogId').type).toEqual(
-        new GraphQLNonNull(GraphQLInt)
-      );
-      expect(commentsArguments.find(a => a.name === 'postId').type).toEqual(
-        new GraphQLNonNull(GraphQLInt)
-      );
-    });
 
-    it('Should generate types', () => {
-      const blogType = generateTypes(blogSwaggerJson, {
-        listResultName: 'ListResult',
-        apiResolver: () => {},
-      })
-      .getType('Blog')
-      .getFields();
+        expect(typeof blogType.id).toBe('object');
+        expect(typeof blogType.name).toBe('object');
+        expect(typeof blogType.createdOn).toBe('object');
+        expect(typeof blogType.updatedOn).toBe('object');
+        expect(typeof blogType.createdBy).toBe('object');
+        expect(typeof blogType.postCount).toBe('object');
+        expect(typeof blogType.posts).toBe('object');
+        expect(typeof blogType.deleted).toBe('object');
+      });
 
-      expect(typeof blogType.id).toBe('object');
-      expect(typeof blogType.name).toBe('object');
-      expect(typeof blogType.createdOn).toBe('object');
-      expect(typeof blogType.updatedOn).toBe('object');
-      expect(typeof blogType.createdBy).toBe('object');
-      expect(typeof blogType.postCount).toBe('object');
-      expect(typeof blogType.posts).toBe('object');
-      expect(typeof blogType.deleted).toBe('object');
-    });
+      it('Should have totalItems and items on lists', () => {
+        const types = generateTypes(blogSwaggerJson, {
+          listResultName: 'ListResult',
+          apiResolver: () => {},
+          paginationStrategy: 'SIMPLE',
+        });
 
-    it('Should generate types with arguments', () => {
-      const blogType = generateTypes(blogSwaggerJson, {
-        listResultName: 'ListResult',
-        apiResolver: () => {},
-      })
-      .getType('Blog')
-      .getFields();
+        const blogType = types.getType('Blog')
+        .getFields();
+        expect(typeof blogType.posts).toBe('object');
+        expect(blogType.posts.type.toString()).toBe('PostsContainer');
 
-      expect(blogType.posts.args.some(a => a.name === 'blogId')).toBe(true);
-      expect(blogType.posts.args.some(a => a.name === 'sinceId')).toBe(true);
-      expect(blogType.posts.args.some(a => a.name === 'maxId')).toBe(true);
-      expect(blogType.posts.args.some(a => a.name === 'count')).toBe(true);
-    });
+        const postContainerFields = types.getType('PostsContainer').getFields();
+        expect(postContainerFields.totalItems.type).toEqual(new GraphQLNonNull(GraphQLInt));
+        expect(postContainerFields.items.type.toString()).toEqual('[Post]');
+      });
 
-    it('Should not have any required arguments on type queries', () => {
-      const blogType = generateTypes(blogSwaggerJson, {
-        listResultName: 'ListResult',
-        apiResolver: () => {},
-      })
-      .getType('Blog')
-      .getFields();
+      it('Should have arguments on list items', () => {
+        const types = generateTypes(blogSwaggerJson, {
+          listResultName: 'ListResult',
+          apiResolver: () => {},
+          paginationStrategy: 'SIMPLE',
+        });
 
-      const postArguments = blogType.posts.args;
-      expect(postArguments.find(a => a.name === 'blogId').type).toBe(GraphQLInt);
+        const blogType = types.getType('Blog').getFields();
+        expect(blogType.posts.args.some(a => a.name === 'count')).toBe(true);
+        expect(blogType.posts.args.some(a => a.name === 'blogId')).toBe(true);
+        expect(blogType.posts.args.some(a => a.name === 'sinceId')).toBe(true);
+        expect(blogType.posts.args.some(a => a.name === 'maxId')).toBe(true);
+      });
     });
   });
 
@@ -239,7 +302,7 @@ describe('Unit Tests', () => {
         parent: { id: 123 },
         parentType: 'Blog',
         rawUrl: '/blog/{blogId}/post',
-        type: 'Post'
+        type: 'Post',
       });
     });
   });

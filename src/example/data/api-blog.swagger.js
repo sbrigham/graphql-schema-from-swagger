@@ -800,12 +800,6 @@ export default {
             $ref: '#/definitions/Comment',
           },
         },
-        recentComments: {
-          type: 'array',
-          items: {
-            $ref: '#/definitions/Comment',
-          },
-        },
       },
     },
     'ListResult[Post]': {

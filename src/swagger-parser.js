@@ -1,13 +1,17 @@
 // @flow
 
+export type PaginationStrategy = "NONE" | "SIMPLE";
+
 export type SwaggerParserOptions = {
   apiResolver: Function,
   listResultName: string,
+  paginationStrategy?: PaginationStrategy,
 };
 
 export type Entity = {
   name: string,
   parentEntityName: string,
+  paginationStrategy: PaginationStrategy,
   endpoints: Object,
   properties: Object,
   relationships: Object,
@@ -17,6 +21,7 @@ export type Entity = {
 export default class SwaggerParser {
   swaggerJson: Object;
   listResultName: string;
+  paginationStrategy: PaginationStrategy;
   listItemRegex: Object;
   mainResolver: Function;
   constructor(swaggerJson: Object, options: SwaggerParserOptions) {
@@ -30,6 +35,10 @@ export default class SwaggerParser {
 
     if (!options.apiResolver) throw new Error('apiResolver is required');
 
+    if (options.paginationStrategy && (options.paginationStrategy !== 'NONE' && options.paginationStrategy !== 'SIMPLE'))
+      throw new Error(`The pagination strategy: ${options.paginationStrategy} does not exist`);
+
+    this.paginationStrategy = options.paginationStrategy || 'NONE';
     this.swaggerJson = swaggerJson;
     this.listResultName = options.listResultName;
     this.listItemRegex = new RegExp(
@@ -172,6 +181,7 @@ export default class SwaggerParser {
       .filter(val => this.swaggerJson.definitions[val].type === 'object')
       .filter(name => !this.listItemRegex.test(name))
       .map(name => ({
+        paginationStrategy: this.paginationStrategy,
         endpoints: this.endpointsForEntity(name),
         mainResolver: this.mainResolver,
         name,

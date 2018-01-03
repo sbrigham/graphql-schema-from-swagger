@@ -5,7 +5,7 @@ import { genResolvers } from './resolvers';
 import { generateTypeDefs } from './type-defs';
 import SwaggerParser, {
   type SwaggerParserOptions,
-  type Entity,
+  type Entity
 } from './swagger-parser';
 
 /**
@@ -27,7 +27,7 @@ export function generateTypes(
   options: SwaggerParserOptions
 ) {
   const swaggerParser = new SwaggerParser(swaggerJson, options);
-  return generateTypeDefs(swaggerParser.getEntities());
+  return generateTypeDefs(swaggerParser.getEntities(), options.paginationStrategy);
 }
 
 export function generate(swaggerJson: Object, options: SwaggerParserOptions) {
