@@ -199,9 +199,10 @@ describe('Integration Tests', () => {
         const blogType = types.getType('Blog')
         .getFields();
         expect(typeof blogType.posts).toBe('object');
-        expect(blogType.posts.type.toString()).toBe('PostsContainer');
+        expect(blogType.posts.type.toString().includes('PostsContainer')).toBe(true);
 
-        const postContainerFields = types.getType('PostsContainer').getFields();
+        const postsContainerKey = Object.keys(types.getTypeMap()).find(t => t.includes('PostsContainer'));
+        const postContainerFields = types.getType(postsContainerKey).getFields();
         expect(postContainerFields.totalItems.type).toEqual(new GraphQLNonNull(GraphQLInt));
         expect(postContainerFields.items.type.toString()).toEqual('[Post]');
       });

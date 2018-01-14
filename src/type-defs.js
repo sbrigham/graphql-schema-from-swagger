@@ -41,16 +41,16 @@ function toPrimitiveType(type: string, isRequired: boolean = false) {
   }
 }
 
-// Note this only works if you have one reference in your schema
 function buildPagedListType(
   arrayEntityName: string,
   allGraphqlArguments: Object,
   isRootQuery: boolean,
   paginationStrategy: PaginationStrategy
 ) {
+  // random string solves a duplicate reference issue
   return {
     type: new GraphQLObjectType({
-      name: `${Pluralize(arrayEntityName)}Container`,
+      name: `${Pluralize(arrayEntityName)}Container_${Math.random().toString(36).substring(7)}`,
       fields: {
         totalItems: {
           type: new GraphQLNonNull(GraphQLInt),

@@ -794,6 +794,12 @@ export default {
           format: 'int32',
           type: 'integer',
         },
+        recentComments: {
+          type: 'array',
+          items: {
+            $ref: '#/definitions/Comment',
+          },
+        },
         comments: {
           type: 'array',
           items: {
