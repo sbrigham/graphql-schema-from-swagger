@@ -1,6 +1,6 @@
 {
   "name": "graphql-schema-from-swagger",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Create apollo ready resolvers and type definitions for one or multiple swagger enabled apis",
   "main": "lib/index.js",
   "scripts": {

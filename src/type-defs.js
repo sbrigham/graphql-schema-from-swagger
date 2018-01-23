@@ -261,12 +261,31 @@ export function generateTypeDefs(entities: Array<Entity>) {
   const rootQuery = graph.type('query').extend(() =>
     entities.reduce((acc, entity) => {
       if (entity.endpoints.list) {
-        const singularEntityType = graph.type(entity.name);
-        const type = new GraphQLList(singularEntityType);
-        acc[Pluralize(toCamelCase(entity.name))] = {
-          type,
-          args: graphQlArguments[entity.name].list.root,
-        };
+
+        if (entity.paginationStrategy === 'SIMPLE') {
+          acc[Pluralize(toCamelCase(entity.name))] = {
+            type: new GraphQLObjectType({
+              name: `${Pluralize(entity.name)}`,
+              fields: {
+                totalItems: {
+                  type: new GraphQLNonNull(GraphQLInt),
+                },
+                items: {
+                  type: new GraphQLList(graph.type(entity.name)),
+                },
+              }
+            }),
+            args: graphQlArguments[entity.name].list.root,
+          };
+        } else {
+          const singularEntityType = graph.type(entity.name);
+          const type = new GraphQLList(singularEntityType);
+
+          acc[Pluralize(toCamelCase(entity.name))] = {
+            type,
+            args: graphQlArguments[entity.name].list.root,
+          };
+        }
       }
 
       if (entity.endpoints.single) {
