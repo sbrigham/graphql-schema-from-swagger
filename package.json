@@ -1,6 +1,6 @@
 {
   "name": "graphql-schema-from-swagger",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Create apollo ready resolvers and type definitions for one or multiple swagger enabled apis",
   "main": "lib/index.js",
   "scripts": {
@@ -27,6 +27,7 @@
     "babel-plugin-transform-runtime": "^6.22.0",
     "babel-preset-es2017": "^6.24.1",
     "babel-preset-flow": "^6.23.0",
+    "babel-preset-react-native": "^4.0.0",
     "eslint": "^3.11.1",
     "eslint-config-airbnb": "^12.0.0",
     "eslint-plugin-prefer-object-spread": "^1.0.0",
