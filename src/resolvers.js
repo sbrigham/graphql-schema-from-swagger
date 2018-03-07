@@ -1,6 +1,6 @@
 // @flow
 
-import { type Entity } from './swagger-parser';
+import { type Entity } from './utils/swagger-parser';
 import Pluralize from 'pluralize';
 import toCamelCase from 'camelcase';
 

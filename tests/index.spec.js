@@ -5,6 +5,7 @@ import {
   GraphQLNonNull,
   GraphQLObjectType,
   GraphQLList,
+  printSchema
 } from 'graphql';
 import {
   generate,
@@ -12,9 +13,10 @@ import {
   generateTypes,
   schemaFromMultiple,
 } from '../src/index';
-import SwaggerParser from '../src/swagger-parser';
+import SwaggerParser from '../src/utils/swagger-parser';
 import blogSwaggerJson from './example/data/api-blog.swagger';
 import accountSwaggerJson from './example/data/api-account.swagger';
+import orgSwaggerJson from './example/data/org';
 
 declare var describe: any;
 declare var it: any;
@@ -75,6 +77,16 @@ describe('Integration Tests', () => {
   });
 
   describe('generateTypes', () => {
+    it('Works with Objects', () => {
+      var types = generateTypes(orgSwaggerJson, {
+        listResultName: 'PagedResult',
+        apiResolver: () => {},
+      });
+
+      const result = types.getType('SocialMedia');
+      expect(typeof result).toBe('object');
+    });
+
     describe('No pagination strategy', () => {
       it('Should return a GraphqlSchema', () => {
         expect(
@@ -196,13 +208,11 @@ describe('Integration Tests', () => {
           paginationStrategy: 'SIMPLE',
         });
 
-        const blogType = types.getType('Blog')
-        .getFields();
+        const blogType = types.getType('Blog').getFields();
         expect(typeof blogType.posts).toBe('object');
-        expect(blogType.posts.type.toString().includes('PostsContainer')).toBe(true);
 
-        const postsContainerKey = Object.keys(types.getTypeMap()).find(t => t.includes('PostsContainer'));
-        const postContainerFields = types.getType(postsContainerKey).getFields();
+        const postsContainer = Object.keys(types.getTypeMap()).find(t => t.includes('Posts'));
+        const postContainerFields = types.getType(postsContainer).getFields();
         expect(postContainerFields.totalItems.type).toEqual(new GraphQLNonNull(GraphQLInt));
         expect(postContainerFields.items.type.toString()).toEqual('[Post]');
       });
@@ -213,7 +223,6 @@ describe('Integration Tests', () => {
           apiResolver: () => {},
           paginationStrategy: 'SIMPLE',
         });
-
         const blogType = types.getType('Blog').getFields();
         expect(blogType.posts.args.some(a => a.name === 'count')).toBe(true);
         expect(blogType.posts.args.some(a => a.name === 'blogId')).toBe(true);
@@ -286,6 +295,15 @@ describe('Unit Tests', () => {
             listResultName: 'Test',
           })
       ).not.toThrow();
+    });
+
+    it('Works without a ListResultName', () => {
+      var parser = new SwaggerParser(blogSwaggerJson, {
+        apiResolver: () => {},
+        listResultName: 'Test',
+      });
+      const entities = parser.getEntities();
+      expect(typeof entities).toBe('object');
     });
   });
 

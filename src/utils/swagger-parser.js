@@ -163,6 +163,7 @@ export default class SwaggerParser {
             const entityName = currentEntityProperties[property].items[
               '$ref'
             ].replace('#/definitions/', '');
+
             const listEndpointName = this.getListEndpointEntity(entityName);
             if (
               `${this.listResultName}[${entity}]` === listEndpointName &&

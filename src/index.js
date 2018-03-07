@@ -6,7 +6,7 @@ import { generateTypeDefs } from './type-defs';
 import SwaggerParser, {
   type SwaggerParserOptions,
   type Entity
-} from './swagger-parser';
+} from './utils/swagger-parser';
 
 /**
  * Returns an array of objects where each object has
