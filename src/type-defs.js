@@ -8,7 +8,6 @@ import buildRootQuery from './builders/build-root-query';
 
 /*
   TODO
-  see if we can remove the listResultName
   check out notifications swagger + get that working
 */
 

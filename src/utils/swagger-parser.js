@@ -4,7 +4,6 @@ export type PaginationStrategy = "NONE" | "SIMPLE";
 
 export type SwaggerParserOptions = {
   apiResolver: Function,
-  listResultName: string,
   paginationStrategy?: PaginationStrategy,
 };
 
@@ -19,8 +18,7 @@ export type Entity = {
 };
 
 export default class SwaggerParser {
-  swaggerJson: Object;
-  listResultName: string;
+  swaggerJson: { [string]: Object };
   paginationStrategy: PaginationStrategy;
   listItemRegex: Object;
   mainResolver: Function;
@@ -31,8 +29,6 @@ export default class SwaggerParser {
     if (swaggerJson.swagger === undefined)
       throw new Error('The swagger json is not valid');
 
-    if (!options.listResultName) throw new Error('listResultName is required');
-
     if (!options.apiResolver) throw new Error('apiResolver is required');
 
     if (options.paginationStrategy && (options.paginationStrategy !== 'NONE' && options.paginationStrategy !== 'SIMPLE'))
@@ -40,14 +36,13 @@ export default class SwaggerParser {
 
     this.paginationStrategy = options.paginationStrategy || 'NONE';
     this.swaggerJson = swaggerJson;
-    this.listResultName = options.listResultName;
     this.listItemRegex = new RegExp(
-      `[${this.listResultName}]\\[([a-zA-Z]+)\\]$`
+      `[a-zA-Z]+\\[([a-zA-Z]+)\\]$`
     );
     this.mainResolver = options.apiResolver;
   }
 
-  getListEndpointEntity(name: string) {
+  getListEndpointEntity(name: string): ?string {
     const listEndpointName = Object.keys(this.swaggerJson.definitions).find(
       val => this.listItemRegex.test(val) && val.includes(name)
     );
@@ -84,10 +79,6 @@ export default class SwaggerParser {
     };
   }
 
-  getListResultName(entityName: string) {
-    return `${this.listResultName}[${entityName}]`;
-  }
-
   endpointsForEntity(entity: string) {
     let list,
       single = null;
@@ -100,7 +91,7 @@ export default class SwaggerParser {
         };
       }
 
-      if (this.endpointEqualsEntity(endpoint, this.getListResultName(entity))) {
+      if (this.endpointEqualsEntity(endpoint, this.getListEndpointEntity(entity))) {
         list = {
           url: endpoint,
           parameters: this.swaggerJson.paths[endpoint].get.parameters,
@@ -165,8 +156,9 @@ export default class SwaggerParser {
             ].replace('#/definitions/', '');
 
             const listEndpointName = this.getListEndpointEntity(entityName);
+
             if (
-              `${this.listResultName}[${entity}]` === listEndpointName &&
+              this.listItemRegex.test(listEndpointName) &&
               this.endpointForEntity(entityName)
             ) {
               parentEntityName = currentEntity;

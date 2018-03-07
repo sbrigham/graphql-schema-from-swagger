@@ -28,7 +28,6 @@ describe('Integration Tests', () => {
     it('Has resolvers and typeDefs', () => {
       var result = generate(blogSwaggerJson, {
         apiResolver: () => {},
-        listResultName: 'ListResult',
       });
       expect(result).toHaveProperty('resolvers');
       expect(result).toHaveProperty('typeDefs');
@@ -39,7 +38,6 @@ describe('Integration Tests', () => {
     it('Should have a paginationStrategy', () => {
       var result = generate(blogSwaggerJson, {
         apiResolver: () => {},
-        listResultName: 'ListResult',
         paginationStrategy: 'NONE',
       });
       expect(result).toHaveProperty('resolvers');
@@ -53,7 +51,6 @@ describe('Integration Tests', () => {
     it('Has a root query', () => {
       var resolvers = generateResolvers(blogSwaggerJson, {
         apiResolver: () => {},
-        listResultName: 'ListResult',
       });
       expect(resolvers).toHaveProperty('Query');
       expect(typeof resolvers.Query).toBe('object');
@@ -68,7 +65,6 @@ describe('Integration Tests', () => {
     it('Has resolvers for each type', () => {
       var resolvers = generateResolvers(blogSwaggerJson, {
         apiResolver: () => {},
-        listResultName: 'ListResult',
       });
       expect(typeof resolvers.Comment).toBe('object');
       expect(typeof resolvers.Post.comments).toBe('function');
@@ -79,7 +75,6 @@ describe('Integration Tests', () => {
   describe('generateTypes', () => {
     it('Works with Objects', () => {
       var types = generateTypes(orgSwaggerJson, {
-        listResultName: 'PagedResult',
         apiResolver: () => {},
       });
 
@@ -91,13 +86,11 @@ describe('Integration Tests', () => {
       it('Should return a GraphqlSchema', () => {
         expect(
           typeof generateTypes(blogSwaggerJson, {
-            listResultName: 'ListResult',
             apiResolver: () => {},
           })
         ).toBe('object');
         expect(
           generateTypes(blogSwaggerJson, {
-            listResultName: 'ListResult',
             apiResolver: () => {},
           }).constructor.name
         ).toBe('GraphQLSchema');
@@ -105,7 +98,6 @@ describe('Integration Tests', () => {
 
       it('Should generate a root query type', () => {
         const queryTypeFields = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
         })
           .getQueryType()
@@ -120,7 +112,6 @@ describe('Integration Tests', () => {
 
       it('Should generate a root query type with arguments', () => {
         const queryTypeFields = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
         })
           .getQueryType()
@@ -136,7 +127,6 @@ describe('Integration Tests', () => {
 
       it('Should generate types', () => {
         const blogType = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
         })
           .getType('Blog')
@@ -154,7 +144,6 @@ describe('Integration Tests', () => {
 
       it('Should generate types with arguments', () => {
         const blogType = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
         })
           .getType('Blog')
@@ -168,7 +157,6 @@ describe('Integration Tests', () => {
 
       it('Should not have any required arguments on type queries', () => {
         const blogType = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
         })
         .getType('Blog')
@@ -184,7 +172,6 @@ describe('Integration Tests', () => {
     describe('Simple pagination strategy', () => {
       it('Should generate types', () => {
         const blogType = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
           paginationStrategy: 'SIMPLE',
         })
@@ -203,7 +190,6 @@ describe('Integration Tests', () => {
 
       it('Should have totalItems and items on lists', () => {
         const types = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
           paginationStrategy: 'SIMPLE',
         });
@@ -219,7 +205,6 @@ describe('Integration Tests', () => {
 
       it('Should have arguments on list items', () => {
         const types = generateTypes(blogSwaggerJson, {
-          listResultName: 'ListResult',
           apiResolver: () => {},
           paginationStrategy: 'SIMPLE',
         });
@@ -238,14 +223,12 @@ describe('Integration Tests', () => {
         {
           swaggerJson: blogSwaggerJson,
           options: {
-            listResultName: 'ListResult',
             apiResolver: () => {},
           },
         },
         {
           swaggerJson: accountSwaggerJson,
           options: {
-            listResultName: 'ListResult',
             apiResolver: () => {},
           },
         },
@@ -260,14 +243,12 @@ describe('Integration Tests', () => {
         {
           swaggerJson: blogSwaggerJson,
           options: {
-            listResultName: 'ListResult',
             apiResolver: () => {},
           },
         },
         {
           swaggerJson: accountSwaggerJson,
           options: {
-            listResultName: 'ListResult',
             apiResolver: () => {},
           },
         },
@@ -292,18 +273,8 @@ describe('Unit Tests', () => {
         () =>
           new SwaggerParser(blogSwaggerJson, {
             apiResolver: () => {},
-            listResultName: 'Test',
           })
       ).not.toThrow();
-    });
-
-    it('Works without a ListResultName', () => {
-      var parser = new SwaggerParser(blogSwaggerJson, {
-        apiResolver: () => {},
-        listResultName: 'Test',
-      });
-      const entities = parser.getEntities();
-      expect(typeof entities).toBe('object');
     });
   });
 
@@ -312,7 +283,6 @@ describe('Unit Tests', () => {
       const apiResolver = jest.fn();
       const resolvers = generateResolvers(blogSwaggerJson, {
         apiResolver,
-        listResultName: 'ListResult',
       });
       var postsResolver = resolvers['Blog']['posts']({ id: 123 }, { take: 10 });
       expect(apiResolver).toBeCalledWith({

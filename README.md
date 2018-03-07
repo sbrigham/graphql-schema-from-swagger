@@ -2,7 +2,7 @@
 
 Dynamically create your apollo ready graphql schema from one or many swagger enabled apis
 
-## Installation 
+## Installation
 ```
 npm install graphql-schema-from-swagger
 ```
@@ -38,8 +38,6 @@ const apolloSchema = generate(accountApiSwaggerJson, {
       return result;
     },
   },
-  // This is the defined type in your api from your list endpoints
-  listResultName: 'ListResult',
   paginationStrategy: 'NONE' // this is the default
 });
 
@@ -85,7 +83,6 @@ const apolloSchema = schemaFromMultiple([
 
         return result;
       },
-      listResultName: 'ListResult'
       paginationStrategy: 'NONE' // this is the default... can be left out
     }
   },
@@ -115,7 +112,6 @@ const apolloSchema = schemaFromMultiple([
 
         return result;
       },
-      listResultName: 'PagedResult',
       paginationStrategy: 'NONE' // this is the default... can be left out
     }
   }
@@ -160,7 +156,7 @@ One of the options on schemaFromMultiple, generate is "paginationStrategy". Righ
   }
   ```
 
-  Please note you will need to set the "totalItems" and "items" field in your apiResolver doing something like: 
+  Please note you will need to set the "totalItems" and "items" field in your apiResolver doing something like:
   ```
   async ({
       parent,
@@ -171,7 +167,7 @@ One of the options on schemaFromMultiple, generate is "paginationStrategy". Righ
       type,
       context,
     }) => {
-      // Come up with a strategy to set the variables on the raw url depending on how your api handles requests 
+      // Come up with a strategy to set the variables on the raw url depending on how your api handles requests
       var endpoint = setRawUrl({
         rawUrl,
         fieldName,
@@ -193,14 +189,14 @@ One of the options on schemaFromMultiple, generate is "paginationStrategy". Righ
   ```
   The "SIMPLE" strategy is super useful when your api response for list requests is wrapped in a object that contains the totalItems
 
-### apiResolver 
-This is where all the resolvers for you get requests funnel through. 
+### apiResolver
+This is where all the resolvers for you get requests funnel through.
 
 As part of the callback you are given relevant information to help set variables on the raw url:
 
 ```parent```
 
-  A hydrated parent object think blog when dealing with posts 
+  A hydrated parent object think blog when dealing with posts
 
 ```parentType```
 
