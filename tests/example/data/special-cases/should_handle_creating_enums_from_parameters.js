@@ -35,7 +35,33 @@ export default {
                           "format": "uuid"
                       },
                       "collectionFormat": "multi"
-                  }
+                  },
+                  {
+                    "name": "Status",
+                    "in": "query",
+                    "required": false,
+                    "type": "string",
+                    "enum": [
+                        "InProgress",
+                        "Pending",
+                        "Approved",
+                        "Denied"
+                    ]
+                },
+                {
+                  "name": "Visibilities",
+                  "in": "query",
+                  "required": false,
+                  "type": "array",
+                  "items": {
+                      "type": "string",
+                      "enum": [
+                          "Public",
+                          "Private"
+                      ]
+                  },
+                  "collectionFormat": "multi"
+              },
               ],
               "responses": {
                   "200": {
@@ -144,6 +170,6 @@ export default {
               },
           }
       },
-  },
+    },
   "securityDefinitions": {}
 }

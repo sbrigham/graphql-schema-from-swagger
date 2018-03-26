@@ -1,5 +1,5 @@
 // @flow
-import { type Entity, type PaginationStrategy } from '../utils/swagger-parser';
+import { type Entity } from '../utils/swagger-parser';
 import { toPrimitiveType } from '../utils/to-graphql-field';
 
 import {
@@ -30,35 +30,51 @@ class GenerateArguments {
     property: Object,
     allGraphqlArguments: Object,
     isRootQuery: boolean = false,
-    paginationStrategy?: PaginationStrategy
   ) {
     const {
+      name,
       type,
       items,
       properties,
       in: location,
+      enum: enumValues
     } = property;
 
-    return {
-      type: type === 'array' ?
-        new GraphQLList(toPrimitiveType(items.type, isRootQuery && location === 'path')):
-        toPrimitiveType(type, isRootQuery && location === 'path')
-    };
+    switch (type) {
+      case 'array':
+        return {
+          type: new GraphQLList(toPrimitiveType({
+            name,
+            type: items.type,
+            enumValues: items.enum,
+            isRequired: isRootQuery && location === 'path',
+            distributedSchema: this.distributedSchema
+          }))
+        }
+      default:
+        return {
+          type: toPrimitiveType({
+            type,
+            name,
+            isRequired: isRootQuery && location === 'path',
+            enumValues,
+            distributedSchema: this.distributedSchema
+          })
+        }
+    }
   }
 
   fieldsFromParameters(
     swaggerParameters: Array<Object>,
     allGraphqlArguments: Object = {},
-    isRootQuery: boolean = false,
-    paginationStrategy?: PaginationStrategy
+    isRootQuery: boolean = false
   ) {
     const fields = {};
     swaggerParameters.map(parameter => {
       fields[toCamelCase(parameter.name)] = this.toGraphqlField(
         parameter,
         allGraphqlArguments,
-        isRootQuery,
-        paginationStrategy
+        isRootQuery
       );
     });
     return fields;
@@ -84,6 +100,24 @@ class GenerateArguments {
 
   generate(entities: Array<Entity>): EntityArguments {
     return entities.reduce((acc, entity) => {
+
+      acc[entity.name] = {
+        root: {},
+        type: {}
+      };
+
+      // if(entity.endpoint) {
+      //   acc[entity.name].root = this.generateArguments(
+      //     entity.endpoint.parameters,
+      //     true
+      //   );
+
+      //   acc[entity.name].type = this.generateArguments(
+      //     entity.endpoint.parameters,
+      //     false
+      //   );
+      // }
+
       acc[entity.name] = {
         list: {
           root: {},
@@ -116,6 +150,7 @@ class GenerateArguments {
           false
         );
       }
+
       return acc;
     }, {});
   }

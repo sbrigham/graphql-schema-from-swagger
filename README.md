@@ -3,14 +3,16 @@
 Dynamically create your apollo ready graphql schema from one or many swagger enabled apis
 
 ## Installation
-```
+
+```bash
 npm install graphql-schema-from-swagger
 ```
 
 ## Usage
 
-### Single Api
-```
+### Single Api Example
+
+```javascript
 import { generate } from 'graphql-schema-from-swagger';
 
 const apolloSchema = generate(accountApiSwaggerJson, {
@@ -32,13 +34,10 @@ const apolloSchema = generate(accountApiSwaggerJson, {
         parent,
       });
 
-      var result = await restClient.get(endpoint.url, parameters);
-      if (result.items && Array.isArray(result.items)) return result.items;
-
-      return result;
+      // fetch data using your favorite http client
+      return await restClient.get(endpoint.url, parameters);
     },
-  },
-  paginationStrategy: 'NONE' // this is the default
+  }
 });
 
 /*
@@ -51,9 +50,9 @@ const apolloSchema = generate(accountApiSwaggerJson, {
 
 ```
 
-### Multiple Apis
+### Multiple Api Example
 
-```
+```javascript
 import { schemaFromMultiple } from 'graphql-schema-from-swagger';
 
 const apolloSchema = schemaFromMultiple([
@@ -78,12 +77,9 @@ const apolloSchema = schemaFromMultiple([
           parent,
         });
 
-        var result = await restClient.get(endpoint.url, parameters);
-        if (result.items && Array.isArray(result.items)) return result.items;
-
-        return result;
-      },
-      paginationStrategy: 'NONE' // this is the default... can be left out
+        // fetch data using your favorite http client
+        return await restClient.get(endpoint.url, parameters);
+      }
     }
   },
   {
@@ -107,89 +103,16 @@ const apolloSchema = schemaFromMultiple([
           parent,
         });
 
-        var result = await restClient.get(endpoint.url, parameters);
-        if (result.items && Array.isArray(result.items)) return result.items;
-
-        return result;
-      },
-      paginationStrategy: 'NONE' // this is the default... can be left out
+        // fetch data using your favorite http client
+        return await restClient.get(endpoint.url, parameters);
+      }
     }
   }
 ]);
-
-/*
-  again your apolloSchema will look like:
-  {
-    typeDefs: ``, // Your graphql schema as a string,
-    resolvers: {}, // The resolvers for your graphql types
-  }
-*/
 ```
 
-### paginationStrategy
-One of the options on schemaFromMultiple, generate is "paginationStrategy". Right now there are two options
-
-1.) 'NONE' (default)
-  This will make it so all of your list types will be directly on their field name i.e.
-  ```
-  blog(id: 1) {
-    id
-    posts(take: 2, ...other args...) {
-      id
-      text
-    }
-  }
-  ```
-
-2.) 'SIMPLE'
-  This just adds a totalItems under your list items along side a nested "items" list i.e.
-  ```
-  blog(id: 1) {
-    id
-    posts(take: 2, ...other args...) {
-      totalItems
-      items {
-        id
-        text
-      }
-    }
-  }
-  ```
-
-  Please note you will need to set the "totalItems" and "items" field in your apiResolver doing something like:
-  ```
-  async ({
-      parent,
-      parentType,
-      parameters,
-      rawUrl,
-      fieldName,
-      type,
-      context,
-    }) => {
-      // Come up with a strategy to set the variables on the raw url depending on how your api handles requests
-      var endpoint = setRawUrl({
-        rawUrl,
-        fieldName,
-        parameters,
-        parentType,
-        parent,
-      });
-
-      var result = await restClient.get(endpoint.url, parameters);
-      if (result.items && Array.isArray(result.items)) {
-        return {
-          totalItems: result.totalItems,
-          items: result.items,
-        }
-      }
-
-      return result;
-    }
-  ```
-  The "SIMPLE" strategy is super useful when your api response for list requests is wrapped in a object that contains the totalItems
-
 ### apiResolver
+
 This is where all the resolvers for you get requests funnel through.
 
 As part of the callback you are given relevant information to help set variables on the raw url:
@@ -219,25 +142,23 @@ As part of the callback you are given relevant information to help set variables
   i.e "Post", "Comment", "Account"
 
 ```context```
+  The apollo context object
 
-  The apollo context
 ### Things to note
 
-To get a raw graphql schema object (graphqljs) you can call use:
-```
+To get a raw GraphQl Schema Object (graphqljs) you can call use:
+
+```javascript
+
 import { generateTypes } from 'graphql-schema-from-swagger';
 
-const schema = generateTypes(accountSwaggerJson, { listResultName: ..., apiResolver ... });
+const schema = generateTypes(accountSwaggerJson, { apiResolver });
 
 ```
 
-I've only tested this with [Swashbuckle for AspNetCore](https://github.com/domaindrivendev/Swashbuckle.AspNetCore)
-(I have no idea if it will work with other swaggered apis in different languages / versions)
 
-It only supports get requests at the moment
+
+- Only supports "GET" requests at the moment
 
 Check out the tests for tinkering with example swagger json files (npm run test:watch)
 
-
-### TODO
-- Optional opt in list of types to expose

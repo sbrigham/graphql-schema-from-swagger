@@ -8,10 +8,10 @@ import {
   GraphQLSchema,
   GraphQLNonNull,
   GraphQLList,
+  GraphQLScalarType,
 } from 'graphql';
 
 import { toPrimitiveType, isPrimitiveType } from '../utils/to-graphql-field';
-import handleRootTypePagination from '../utils/pagination-strategy-handler';
 import DistributedSchema from '../utils/distributed-schema';
 import { Entity } from '../utils/swagger-parser';
 import { type EntityArguments } from '../builders/build-arguments';
@@ -22,14 +22,15 @@ function capFirstLetter(string) {
 }
 
 class GenerateTypes {
-  constructor(distributedSchema, graphqlArguments) {
+  constructor(distributedSchema, graphqlArguments, entities) {
     this.distributedSchema = distributedSchema;
     this.graphqlArguments = graphqlArguments;
+    this.entities = entities;
   }
 
   toGraphqlField(
     property: Object,
-    paginationStrategy?: PaginationStrategy
+    forEntityName: string
   ) {
     const {
       args = {},
@@ -57,11 +58,16 @@ class GenerateTypes {
           };
         }
         if (additionalProperties) {
+          if (additionalProperties.type === 'object' || additionalProperties['$ref']) {
+            return {
+              type: this.distributedSchema.type(capFirstLetter(property.name), {}, 'SCALAR')
+            }
+          }
           return {
-            type: toPrimitiveType(
-              additionalProperties.type,
-              location === 'path'
-            ),
+            type: toPrimitiveType({
+              type: additionalProperties.type,
+              isRequired: location === 'path'
+            }),
           };
         }
         throw new Error('Dont know how to handle this type yet...');
@@ -70,23 +76,48 @@ class GenerateTypes {
       case 'string':
       case 'boolean':
         return {
-          type: toPrimitiveType(type, location === 'path'),
+          type: toPrimitiveType({ type, isRequired: location === 'path' }),
         };
       case 'array':
         if (isPrimitiveType(items.type)) {
           return {
-            type: new GraphQLList(toPrimitiveType(items.type)),
+            type: new GraphQLList(toPrimitiveType({ type: items.type })),
           };
         }
 
-        const arrayEntityName = items.$ref.replace('#/definitions/', '');
+        // need the parent entity?
+        const arrayEntityName = items.$ref.replace('#/definitions/', '').replace(/[^\w\s]/gi, '');
+        if(!this.entities.some(e => e.name === arrayEntityName)) {
+          throw new Error(`Array entity ${arrayEntityName} not found while generating types`);
+        }
+
+
+        let arrayType = null;
+        const forEntity = this.entities.find(e => e.name == forEntityName);
+
+        // This needs to turn into... a new bit which means the entity does not belong to a fullEntity
+        if (forEntity.parentEntityName === null && !forEntity.endpoints.list && !forEntity.endpoints.single) {
+          return {
+            type: new GraphQLList(this.distributedSchema.type(arrayEntityName)),
+            args: {},
+          };
+        }
+
+        const arrayEntity = this.entities.find(e => e.name == arrayEntityName);
+
+        if(arrayEntity.endpoints.list && arrayEntity.endpoints.list.listEntityName) {
+          arrayType = this.distributedSchema.type(arrayEntity.endpoints.list.listEntityName);
+        } else {
+          arrayType = new GraphQLList(this.distributedSchema.type(arrayEntityName));
+        }
+
         return {
-          type: handleRootTypePagination(paginationStrategy, this.distributedSchema, arrayEntityName),
+          type: arrayType,
           args:
             this.graphqlArguments[arrayEntityName].list['type'],
         };
       case undefined:
-        const entityName = $ref.replace('#/definitions/', '');
+        const entityName = $ref.replace('#/definitions/', '').replace(/[^\w\s]/gi, '');
         return {
           type: this.distributedSchema.type(entityName),
           args:
@@ -99,31 +130,28 @@ class GenerateTypes {
 
   fieldsFromParameters(
     swaggerParameters: Array<Object>,
-    paginationStrategy?: PaginationStrategy
+    entityName: string
   ) {
     const fields = {};
     swaggerParameters.map(parameter => {
       fields[toCamelCase(parameter.name)] = this.toGraphqlField(
         parameter,
-        this.distributedSchema,
-        this.graphqlArguments,
-        false,
-        paginationStrategy
+        entityName
       );
     });
     return fields;
   }
 
-  generate(entities) {
-    entities.map(entity => {
+  generate() {
+    this.entities.map(entity => {
       this.distributedSchema.type(entity.name, {
-        name: entity.name,
+        name: entity.name.replace(/[^\w\s]/gi, ''),
         fields: () => this.fieldsFromParameters(
           Object.keys(entity.properties).map(key => ({
             ...entity.properties[key],
             name: key,
           })),
-          entity.paginationStrategy
+          entity.name
         ),
       });
     });
@@ -131,6 +159,6 @@ class GenerateTypes {
 }
 
 export default (entities: Array<Entity>, distributedSchema: DistributedSchema, graphqlArguments: EntityArguments) => {
-  (new GenerateTypes(distributedSchema, graphqlArguments)).generate(entities);
+  (new GenerateTypes(distributedSchema, graphqlArguments, entities)).generate();
   return distributedSchema;
 }

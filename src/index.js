@@ -27,7 +27,7 @@ export function generateTypes(
   options: SwaggerParserOptions
 ) {
   const swaggerParser = new SwaggerParser(swaggerJson, options);
-  return generateTypeDefs(swaggerParser.getEntities(), options.paginationStrategy);
+  return generateTypeDefs(swaggerParser.getEntities());
 }
 
 export function generate(swaggerJson: Object, options: SwaggerParserOptions) {

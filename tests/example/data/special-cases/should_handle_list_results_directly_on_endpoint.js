@@ -41,7 +41,10 @@ export default {
                   "200": {
                       "description": "Success",
                       "schema": {
-                          "$ref": "#/definitions/PagedResult[Account]"
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/Account"
+                        }
                       }
                   }
               }

@@ -1,8 +1,7 @@
 // @flow
-
-import { type Entity } from './utils/swagger-parser';
-import Pluralize from 'pluralize';
 import toCamelCase from 'camelcase';
+import Pluralize from 'pluralize';
+import { type Entity } from './utils/swagger-parser';
 
 function resolverFuction(apiResolver: Function, rawUrl: string, parentType: string, type: string, fieldName: string) {
   return async (parent, parameters, context) => {
@@ -29,11 +28,11 @@ export function genResolvers(entities: Array<Entity>) {
       if (!fullEntity) throw new Error(`Relationship ${e.relationships[current].name} was not found for ${e.name}`);
 
       const endpoint = fullEntity.endpoints[entity.isList ? 'list' : 'single'];
-
       if (!endpoint) return acc;
 
+
       acc[current] = resolverFuction(
-        fullEntity.mainResolver,
+        fullEntity.apiResolver,
         endpoint.url,
         e.name,
         fullEntity.name,
@@ -48,7 +47,7 @@ export function genResolvers(entities: Array<Entity>) {
     const endpoints = entity.endpoints;
     if (endpoints.single) {
       acc[toCamelCase(entity.name)] = resolverFuction(
-        entity.mainResolver,
+        entity.apiResolver,
         endpoints.single.url,
         entity.parentEntityName,
         entity.name,
@@ -58,14 +57,13 @@ export function genResolvers(entities: Array<Entity>) {
 
     if (endpoints.list) {
       acc[Pluralize(toCamelCase(entity.name))] = resolverFuction(
-        entity.mainResolver,
+        entity.apiResolver,
         endpoints.list.url,
         entity.parentEntityName,
         entity.name,
         entity.name,
       );
     }
-
     return acc;
   }, {});
   return resolvers;

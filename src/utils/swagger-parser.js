@@ -1,27 +1,24 @@
 // @flow
-
-export type PaginationStrategy = "NONE" | "SIMPLE";
+import toCamelCase from 'camelcase';
 
 export type SwaggerParserOptions = {
   apiResolver: Function,
-  paginationStrategy?: PaginationStrategy,
 };
 
 export type Entity = {
   name: string,
   parentEntityName: string,
-  paginationStrategy: PaginationStrategy,
+  endpoint: Object,
   endpoints: Object,
   properties: Object,
   relationships: Object,
-  mainResolver: Function,
+  apiResolver: Function,
 };
 
 export default class SwaggerParser {
   swaggerJson: { [string]: Object };
-  paginationStrategy: PaginationStrategy;
-  listItemRegex: Object;
-  mainResolver: Function;
+  apiResolver: Function;
+  stripNameRegex: RegExp;
   constructor(swaggerJson: Object, options: SwaggerParserOptions) {
     if (typeof swaggerJson !== 'object')
       throw new Error('Expected an object as input');
@@ -31,25 +28,16 @@ export default class SwaggerParser {
 
     if (!options.apiResolver) throw new Error('apiResolver is required');
 
-    if (options.paginationStrategy && (options.paginationStrategy !== 'NONE' && options.paginationStrategy !== 'SIMPLE'))
-      throw new Error(`The pagination strategy: ${options.paginationStrategy} does not exist`);
-
-    this.paginationStrategy = options.paginationStrategy || 'NONE';
     this.swaggerJson = swaggerJson;
-    this.listItemRegex = new RegExp(
-      `[a-zA-Z]+\\[([a-zA-Z]+)\\]$`
-    );
-    this.mainResolver = options.apiResolver;
+    this.apiResolver = options.apiResolver;
+    this.stripNameRegex = /[^\w\s]/gi;
   }
 
-  getListEndpointEntity(name: string): ?string {
-    const listEndpointName = Object.keys(this.swaggerJson.definitions).find(
-      val => this.listItemRegex.test(val) && val.includes(name)
-    );
-    return listEndpointName;
+  stripEntityName(name: string) {
+    return name.replace(this.stripNameRegex, '');
   }
 
-  endpointEqualsEntity(endpoint: string, entity: string) {
+  endpointEqualsEntity(endpoint: string, entityName: string) {
     return (
       this.swaggerJson.paths[endpoint].get &&
       this.swaggerJson.paths[endpoint].get.responses &&
@@ -58,15 +46,15 @@ export default class SwaggerParser {
       this.swaggerJson.paths[endpoint].get.responses['200'].schema['$ref'] &&
       this.swaggerJson.paths[endpoint].get.responses['200'].schema[
         '$ref'
-      ].replace('#/definitions/', '') === entity
+      ].replace('#/definitions/', '') === entityName
     );
   }
 
-  endpointForEntity(entity: string) {
+  endpointForEntity(entityName: string) {
     let endpointUrl = null;
 
     Object.keys(this.swaggerJson.paths).map(endpoint => {
-      if (this.endpointEqualsEntity(endpoint, entity)) {
+      if (this.endpointEqualsEntity(endpoint, entityName)) {
         endpointUrl = endpoint;
       }
     });
@@ -76,33 +64,79 @@ export default class SwaggerParser {
     return {
       url: endpointUrl,
       parameters: this.swaggerJson.paths[endpointUrl].get.parameters,
+      operationId: toCamelCase(this.swaggerJson.paths[endpointUrl].get.operationId)
     };
   }
 
-  endpointsForEntity(entity: string) {
-    let list,
-      single = null;
-
-    Object.keys(this.swaggerJson.paths).map(endpoint => {
-      if (this.endpointEqualsEntity(endpoint, entity)) {
-        single = {
-          url: endpoint,
-          parameters: this.swaggerJson.paths[endpoint].get.parameters,
-        };
-      }
-
-      if (this.endpointEqualsEntity(endpoint, this.getListEndpointEntity(entity))) {
-        list = {
-          url: endpoint,
-          parameters: this.swaggerJson.paths[endpoint].get.parameters,
+  listEndpointForEntity(rawEntityName: string) {
+    let listEndpoint = null;
+    Object.keys(this.swaggerJson.paths).map(endpointUrl => {
+      if(
+        this.swaggerJson.paths[endpointUrl].get &&
+        !this.swaggerJson.paths[endpointUrl].get.deprecated &&
+        this.swaggerJson.paths[endpointUrl].get.responses &&
+        this.swaggerJson.paths[endpointUrl].get.responses["200"] &&
+        this.swaggerJson.paths[endpointUrl].get.responses["200"].schema &&
+        this.swaggerJson.paths[endpointUrl].get.responses["200"].schema.type === 'array' &&
+        this.swaggerJson.paths[endpointUrl].get.responses["200"].schema.items &&
+        this.swaggerJson.paths[endpointUrl].get.responses["200"].schema.items[
+          '$ref'
+        ].replace('#/definitions/', '') == rawEntityName
+      ) {
+        listEndpoint = {
+          url: endpointUrl,
+          parameters: this.swaggerJson.paths[endpointUrl].get.parameters,
+          listEntityName: null,
         };
       }
     });
 
-    return {
-      list,
-      single,
-    };
+    if(listEndpoint) return listEndpoint;
+
+    const parentEntityName = this.parentForEntity(rawEntityName, true);
+    if (parentEntityName) {
+      const parentProperties = this.swaggerJson.definitions[parentEntityName].properties;
+      const parentEntityEndpoint = this.endpointForEntity(parentEntityName);
+      Object.keys(parentProperties).map(key => {
+        if(
+          parentEntityEndpoint &&
+          parentProperties[key].type === 'array' &&
+          parentProperties[key].items &&
+          parentProperties[key].items['$ref'] &&
+          parentProperties[key].items['$ref'].replace('#/definitions/', '') == rawEntityName
+        ) {
+          listEndpoint = {
+            ...parentEntityEndpoint,
+            listEntityName: this.stripEntityName(parentEntityName),
+          };
+        }
+      });
+    }
+
+    return listEndpoint;
+  }
+
+  endpointsForEntity(entity: string) {
+      let list,
+        single = null;
+
+      Object.keys(this.swaggerJson.paths).map(endpoint => {
+        if (this.endpointEqualsEntity(endpoint, entity)) {
+          single = {
+            url: endpoint,
+            parameters: this.swaggerJson.paths[endpoint].get.parameters,
+          };
+        }
+      });
+
+      const endpoints = {
+        list: this.listEndpointForEntity(entity),
+        single,
+      };
+      if(endpoints.list && endpoints.single) {
+        endpoints.isFullEntity = true;
+      }
+      return endpoints;
   }
 
   relationshipsForEntity(entity: string) {
@@ -115,7 +149,7 @@ export default class SwaggerParser {
           '#/definitions/',
           ''
         );
-        relationships[property] = { name: entityName, isList: false };
+        relationships[property] = { name: this.stripEntityName(entityName), isList: false };
       } else if (
         entityProperties[property].type === 'array' &&
         entityProperties[property].items &&
@@ -125,27 +159,27 @@ export default class SwaggerParser {
           '#/definitions/',
           ''
         );
-        relationships[property] = { name: entityName, isList: true };
+        relationships[property] = { name: this.stripEntityName(entityName), isList: true };
       }
     });
 
     return relationships;
   }
 
-  parentForEntity(entity: string) {
-    let parentEntityName = null;
-    const allEntities = this.swaggerJson.definitions;
-    Object.keys(allEntities)
-      .filter(val => !this.listItemRegex.test(val))
+  parentsForEntity(entity: string) {
+    let parentEntities = [];
+    const allDefinitions = this.swaggerJson.definitions;
+
+    Object.keys(allDefinitions)
       .forEach(currentEntity => {
-        let currentEntityProperties = allEntities[currentEntity].properties;
+        let currentEntityProperties = allDefinitions[currentEntity].properties;
         Object.keys(currentEntityProperties).forEach(property => {
           if (currentEntityProperties[property]['$ref'] != undefined) {
             const entityName = currentEntityProperties[property][
               '$ref'
             ].replace('#/definitions/', '');
             if (entityName === entity && this.endpointForEntity(entityName))
-              parentEntityName = currentEntity;
+              parentEntities.push(currentEntity);
           } else if (
             currentEntityProperties[property].type === 'array' &&
             currentEntityProperties[property].items &&
@@ -154,35 +188,78 @@ export default class SwaggerParser {
             const entityName = currentEntityProperties[property].items[
               '$ref'
             ].replace('#/definitions/', '');
-
-            const listEndpointName = this.getListEndpointEntity(entityName);
-
-            if (
-              this.listItemRegex.test(listEndpointName) &&
-              this.endpointForEntity(entityName)
-            ) {
-              parentEntityName = currentEntity;
+            if(entityName === entity) {
+              parentEntities.push(currentEntity);
             }
           }
         });
       });
-    return parentEntityName;
+
+    return parentEntities;
+  }
+
+  parentForEntity(rawEntityName: string, isRootEntity: boolean = false) {
+    const entity = this.parentsForEntity(rawEntityName).map(e => {
+      let isRoot = false;
+
+      if(this.parentsForEntity(e).length === 0) {
+        isRoot = true;
+      }
+
+      return {
+        isRoot,
+        name: e
+      }
+    }).find(e => e.isRoot === isRootEntity);
+
+    return entity ? entity.name : null;
   }
 
   getEntities(): Array<Object> {
-    const entities = Object.keys(this.swaggerJson.definitions)
+    let entities = Object.keys(this.swaggerJson.definitions)
       .filter(val => this.swaggerJson.definitions[val].type === 'object')
-      .filter(name => !this.listItemRegex.test(name))
       .map(name => ({
-        paginationStrategy: this.paginationStrategy,
         endpoints: this.endpointsForEntity(name),
-        mainResolver: this.mainResolver,
-        name,
+        apiResolver: this.apiResolver,
+        name: this.stripEntityName(name),
         parentEntityName: this.parentForEntity(name),
         properties: this.swaggerJson.definitions[name].properties,
         relationships: this.relationshipsForEntity(name),
       }));
 
-    return entities;
+    const fullEntityListResultNames = entities.reduce((acc, e) => {
+      if(e.endpoints.list && e.endpoints.list.listEntityName) {
+        acc.push(e.endpoints.list.listEntityName);
+      }
+      return acc;
+    }, []);
+
+    // Remove endpoints if the endpoint already exists in a full entity
+    entities = entities.map(e => {
+      if((e.endpoints.single || e.endpoints.list) && fullEntityListResultNames.includes(e.name)) {
+        return {
+          ...e,
+          endpoints: {},
+          relationships: {},
+        }
+      }
+      return e;
+    });
+
+    const usedEntities = [];
+    entities.map(e => {
+      if (e.endpoints.single || e.endpoints.list) {
+        usedEntities.push(e.name);
+      }
+      if (e.endpoints.list && e.endpoints.list.listEntityName) {
+        usedEntities.push(e.endpoints.list.listEntityName);
+      }
+
+      Object.keys(e.relationships).map(key => {
+        usedEntities.push(e.relationships[key].name);
+      });
+    });
+
+    return entities.filter(e => usedEntities.includes(e.name));
   }
 }
