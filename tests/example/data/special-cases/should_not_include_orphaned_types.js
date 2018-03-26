@@ -144,6 +144,15 @@ export default {
               },
           }
       },
+      "OrphanedType": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "format": "uuid",
+                "type": "string"
+            },
+        }
+    },
   },
   "securityDefinitions": {}
 }

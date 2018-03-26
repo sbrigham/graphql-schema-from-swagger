@@ -78,6 +78,66 @@ export default {
               }
           }
       },
+      "/alert": {
+        "get": {
+            "tags": [
+                "Alert"
+            ],
+            "operationId": "AlertGet",
+            "consumes": [],
+            "produces": [
+                "text/plain",
+                "application/json",
+                "text/json"
+            ],
+            "parameters": [
+                {
+                    "name": "Active",
+                    "in": "query",
+                    "required": false,
+                    "type": "boolean"
+                },
+                {
+                    "name": "Skip",
+                    "in": "query",
+                    "required": false,
+                    "type": "integer",
+                    "format": "int32"
+                },
+                {
+                    "name": "Take",
+                    "in": "query",
+                    "required": false,
+                    "type": "integer",
+                    "format": "int32"
+                },
+                {
+                    "name": "OrderByField",
+                    "in": "query",
+                    "required": false,
+                    "type": "string"
+                },
+                {
+                    "name": "OrderByDirection",
+                    "in": "query",
+                    "required": false,
+                    "type": "string",
+                    "enum": [
+                        "Ascending",
+                        "Descending"
+                    ]
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Success",
+                    "schema": {
+                        "$ref": "#/definitions/PagedResult[Alert]"
+                    }
+                }
+            }
+        }
+      },
   },
   "definitions": {
       "PagedResult[Account]": {
@@ -144,6 +204,57 @@ export default {
               },
           }
       },
+      "PagedResult[Alert]": {
+        "type": "object",
+        "properties": {
+            "skip": {
+                "format": "int32",
+                "type": "integer"
+            },
+            "take": {
+                "format": "int32",
+                "type": "integer"
+            },
+            "totalItems": {
+                "format": "int32",
+                "type": "integer"
+            },
+            "items": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/Alert"
+                }
+            }
+        }
+    },
+    "Alert": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "format": "int32",
+                "type": "integer"
+            },
+            "title": {
+                "type": "string"
+            },
+            "message": {
+                "type": "string"
+            },
+            "isActive": {
+                "type": "boolean"
+            },
+            "dateCreated": {
+                "format": "date-time",
+                "type": "string"
+            }
+        }
+    },
   },
   "securityDefinitions": {}
 }
+
+
+
+
+
+

@@ -6,7 +6,7 @@ import { generateTypeDefs } from './type-defs';
 import SwaggerParser, {
   type SwaggerParserOptions,
   type Entity
-} from './swagger-parser';
+} from './utils/swagger-parser';
 
 /**
  * Returns an array of objects where each object has
@@ -27,7 +27,7 @@ export function generateTypes(
   options: SwaggerParserOptions
 ) {
   const swaggerParser = new SwaggerParser(swaggerJson, options);
-  return generateTypeDefs(swaggerParser.getEntities(), options.paginationStrategy);
+  return generateTypeDefs(swaggerParser.getEntities());
 }
 
 export function generate(swaggerJson: Object, options: SwaggerParserOptions) {

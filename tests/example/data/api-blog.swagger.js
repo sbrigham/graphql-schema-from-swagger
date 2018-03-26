@@ -68,9 +68,9 @@ export default {
         responses: {
           '200': {
             description: 'Success',
-            schema: {
-              $ref: '#/definitions/ListResult[Comment]',
-            },
+            'schema': {
+              '$ref': '#/definitions/ListResult[Comment]'
+            }
           },
         },
       },
