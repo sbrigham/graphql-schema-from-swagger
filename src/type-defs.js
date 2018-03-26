@@ -6,11 +6,6 @@ import buildArguments from './builders/build-arguments';
 import buildTypes from './builders/build-types';
 import buildRootQuery from './builders/build-root-query';
 
-/*
-  TODO
-  check out notifications swagger + get that working
-*/
-
 export function generateTypeDefs(entities: Array<Entity>) {
   var distributedSchema = new DistributedSchema();
   const graphQlArguments = buildArguments(entities, distributedSchema);
