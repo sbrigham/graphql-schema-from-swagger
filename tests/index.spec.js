@@ -20,6 +20,7 @@ import noOrphanedTypes from './example/data/special-cases/should_not_include_orp
 import listResultDirectlyOnEndpoint from './example/data/special-cases/should_handle_list_results_directly_on_endpoint';
 import onlyListEndpointJson from './example/data/special-cases/should_handle_having_only_a_list_endpoint_for_an_entity';
 import enumsFromParams from './example/data/special-cases/should_handle_creating_enums_from_parameters';
+import nonLetterStrip from './example/data/special-cases/should_strip_non_letter_characters_on_entities';
 
 declare var describe: any;
 declare var it: any;
@@ -266,6 +267,41 @@ describe('Integration Tests', () => {
       // $FlowFixMe
       expect(typeof resolvers.Query.account).toBe('function');
     });
+
+    it('Filters out entities not apart of a whitelist', () => {
+      var result1 = schemaFromMultiple([
+        {
+          swaggerJson: blogSwaggerJson,
+          options: {
+            apiResolver: () => {},
+          },
+        },
+        {
+          swaggerJson: accountSwaggerJson,
+          options: {
+            apiResolver: () => {},
+          },
+        },
+      ], { entityWhiteList: [] });
+
+      expect(result1.typeDefs).toEqual('');
+      expect(result1.resolvers).toEqual({});
+
+      var result1 = schemaFromMultiple([
+        {
+          swaggerJson: blogSwaggerJson,
+          options: {
+            apiResolver: () => {},
+          },
+        },
+        {
+          swaggerJson: accountSwaggerJson,
+          options: {
+            apiResolver: () => {},
+          },
+        },
+      ], { entityWhiteList: ['Blog'] });
+    });
   });
 });
 
@@ -409,6 +445,69 @@ describe('Unit Tests', () => {
         expect(!!pagedAlertEntity.endpoints.list).toBe(false);
         // $FlowFixMe
         expect(!!pagedAlertEntity.endpoints.single).toBe(false);
+      });
+
+      it('Filters out entities not apart of a whitelist', () => {
+        var apiResolver = () => {};
+        const parser1 = new SwaggerParser(blogSwaggerJson, { apiResolver });
+        expect(parser1.getEntities().length).toBe(7);
+
+        const parser2 = new SwaggerParser(blogSwaggerJson, { apiResolver, entityWhiteList: [] });
+        expect(parser2.getEntities().length).toBe(0);
+
+        const parser3 = new SwaggerParser(blogSwaggerJson, { apiResolver, entityWhiteList: ['Blog'] });
+        expect(parser3.getEntities().length).toBe(1);
+        expect(parser3.getEntities()[0].name).toBe('Blog');
+      });
+
+      it('Filters out entity relationships not apart of a whitelist', () => {
+        var apiResolver = () => {};
+        const parser = new SwaggerParser(blogSwaggerJson, { apiResolver, entityWhiteList: ['Blog', 'Post'] });
+        const entities = parser.getEntities();
+        expect(entities.length).toBe(2);
+        const blog = entities.find(e => e.name === 'Blog') || {};
+        const post = entities.find(e => e.name === 'Post') || {};
+        expect(entities.some(e => e.name === 'Blog')).toBe(true);
+        expect(entities.some(e => e.name === 'Post')).toBe(true);
+        expect(blog.relationships).toEqual({ posts: { name: 'Post', isList: true }});
+        expect(post.relationships).toEqual({});
+      });
+
+      it('Filters out entity properties object references not apart of a whitelist', () => {
+        var apiResolver = () => {};
+        const parser = new SwaggerParser(blogSwaggerJson, { apiResolver, entityWhiteList: ['Blog', 'ListResultBlog'] });
+        const entities = parser.getEntities();
+        expect(entities.length).toBe(2);
+        const blog = entities.find(e => e.name === 'Blog') || {};
+        expect(blog.properties['posts']).toBe(undefined);
+      });
+
+
+     it('Filters out endpoints not apart of a whitelist', () => {
+      var apiResolver = () => {};
+      const parser = new SwaggerParser(blogSwaggerJson, { apiResolver, entityWhiteList: ['Blog'] });
+      const entities = parser.getEntities();
+      expect(entities.length).toBe(1);
+      const blog = entities.find(e => e.name === 'Blog') || {};
+      expect(blog.endpoints.list).toBe(null);
+    });
+
+      it('Strips non letters characters from schema definitions on properties', () => {
+        var apiResolver = () => {};
+        const parser = new SwaggerParser(blogSwaggerJson, { apiResolver });
+        const entities = parser.getEntities();
+
+        const blog = entities.find(e => e.name === 'Blog') || {};
+        expect(blog.properties['posts']['items']['$ref']).toBe('Post');
+      });
+
+      it('Strips non letters characters on entities', () => {
+        var apiResolver = () => {};
+        const parser = new SwaggerParser(nonLetterStrip, { apiResolver });
+        const entities = parser.getEntities();
+
+        const comment = entities.find(e => e.name === 'Comment') || {};
+        expect(comment.endpoints.list.listEntityName).toBe('ListResultComment');
       });
     });
   });

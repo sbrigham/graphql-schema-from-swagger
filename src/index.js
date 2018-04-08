@@ -5,6 +5,7 @@ import { genResolvers } from './resolvers';
 import { generateTypeDefs } from './type-defs';
 import SwaggerParser, {
   type SwaggerParserOptions,
+  type RootSwaggerParserOptions,
   type Entity
 } from './utils/swagger-parser';
 
@@ -44,16 +45,28 @@ export type SwaggerApiType = {
   options: SwaggerParserOptions,
 };
 
-export function schemaFromMultiple(swaggerApis: Array<SwaggerApiType>) {
+export function schemaFromMultiple(swaggerApis: Array<SwaggerApiType>, rootOptions?: RootSwaggerParserOptions) {
   const apiEntities = swaggerApis.map(({ swaggerJson, options }) =>
-    new SwaggerParser(swaggerJson, options).getEntities()
+    new SwaggerParser(swaggerJson, {
+      ...options,
+      ...rootOptions
+    }).getEntities()
   );
 
   const mergedEntities = mergeEntities(apiEntities);
 
+  if (mergedEntities.length === 0) {
+    return {
+      typeDefs: '',
+      resolvers: {},
+    };
+  }
+  const typeDefs = printSchema(generateTypeDefs(mergedEntities));
+  const resolvers = genResolvers(mergedEntities);
+
   return {
-    typeDefs: printSchema(generateTypeDefs(mergedEntities)),
-    resolvers: genResolvers(mergedEntities),
+    typeDefs,
+    resolvers,
   };
 }
 
