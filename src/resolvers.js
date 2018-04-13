@@ -51,7 +51,7 @@ export function genResolvers(entities: Array<Entity>) {
         endpoints.single.url,
         entity.parentEntityName,
         entity.name,
-        entity.name,
+        toCamelCase(entity.name),
       );
     }
 
@@ -61,7 +61,7 @@ export function genResolvers(entities: Array<Entity>) {
         endpoints.list.url,
         entity.parentEntityName,
         entity.name,
-        entity.name,
+        Pluralize(toCamelCase(entity.name)),
       );
     }
     return acc;

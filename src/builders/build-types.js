@@ -1,4 +1,3 @@
-
 import toCamelCase from 'camelcase';
 import {
   GraphQLBoolean,
@@ -16,7 +15,6 @@ import DistributedSchema from '../utils/distributed-schema';
 import { Entity } from '../utils/swagger-parser';
 import { type EntityArguments } from '../builders/build-arguments';
 
-
 function capFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
@@ -28,10 +26,7 @@ class GenerateTypes {
     this.entities = entities;
   }
 
-  toGraphqlField(
-    property: Object,
-    forEntityName: string
-  ) {
+  toGraphqlField(property: Object, forEntityName: string) {
     const {
       args = {},
       type,
@@ -54,19 +49,26 @@ class GenerateTypes {
                   name: key,
                 })),
               ),
-            })
+            }),
           };
         }
         if (additionalProperties) {
-          if (additionalProperties.type === 'object' || additionalProperties['$ref']) {
+          if (
+            additionalProperties.type === 'object' ||
+            additionalProperties['$ref']
+          ) {
             return {
-              type: this.distributedSchema.type(capFirstLetter(property.name), {}, 'SCALAR')
-            }
+              type: this.distributedSchema.type(
+                capFirstLetter(property.name),
+                {},
+                'SCALAR',
+              ),
+            };
           }
           return {
             type: toPrimitiveType({
               type: additionalProperties.type,
-              isRequired: location === 'path'
+              isRequired: location === 'path',
             }),
           };
         }
@@ -86,17 +88,22 @@ class GenerateTypes {
         }
 
         // need the parent entity?
-        const arrayEntityName = items.$ref.replace('#/definitions/', '').replace(/[^\w\s]/gi, '');
-        if(!this.entities.some(e => e.name === arrayEntityName)) {
-          throw new Error(`Array entity ${arrayEntityName} not found while generating types`);
+        const arrayEntityName = items.$ref;
+        if (!this.entities.some(e => e.name === arrayEntityName)) {
+          throw new Error(
+            `Array entity ${arrayEntityName} not found while generating types`,
+          );
         }
-
 
         let arrayType = null;
         const forEntity = this.entities.find(e => e.name == forEntityName);
 
         // This needs to turn into... a new bit which means the entity does not belong to a fullEntity
-        if (forEntity.parentEntityName === null && !forEntity.endpoints.list && !forEntity.endpoints.single) {
+        if (
+          forEntity.parentEntityName === null &&
+          !forEntity.endpoints.list &&
+          !forEntity.endpoints.single
+        ) {
           return {
             type: new GraphQLList(this.distributedSchema.type(arrayEntityName)),
             args: {},
@@ -105,38 +112,45 @@ class GenerateTypes {
 
         const arrayEntity = this.entities.find(e => e.name == arrayEntityName);
 
-        if(arrayEntity.endpoints.list && arrayEntity.endpoints.list.listEntityName) {
-          arrayType = this.distributedSchema.type(arrayEntity.endpoints.list.listEntityName);
+        if (
+          arrayEntity.endpoints.list &&
+          arrayEntity.endpoints.list.listEntityName
+        ) {
+          arrayType = this.distributedSchema.type(
+            arrayEntity.endpoints.list.listEntityName,
+          );
         } else {
-          arrayType = new GraphQLList(this.distributedSchema.type(arrayEntityName));
+          arrayType = new GraphQLList(
+            this.distributedSchema.type(arrayEntityName),
+          );
         }
 
         return {
           type: arrayType,
-          args:
-            this.graphqlArguments[arrayEntityName].list['type'],
+          args: this.graphqlArguments[arrayEntityName].list['type'],
         };
       case undefined:
-        const entityName = $ref.replace('#/definitions/', '').replace(/[^\w\s]/gi, '');
+        const entityName = $ref;
+        const args =
+          this.graphqlArguments[entityName] &&
+          this.graphqlArguments[entityName].single
+            ? this.graphqlArguments[entityName].single['type']
+            : {};
         return {
           type: this.distributedSchema.type(entityName),
-          args:
-            this.graphqlArguments[entityName].single['type'],
+          args,
         };
       default:
         throw new Error('type not defined');
     }
   }
 
-  fieldsFromParameters(
-    swaggerParameters: Array<Object>,
-    entityName: string
-  ) {
+  fieldsFromParameters(swaggerParameters: Array<Object>, entityName: string) {
     const fields = {};
     swaggerParameters.map(parameter => {
       fields[toCamelCase(parameter.name)] = this.toGraphqlField(
         parameter,
-        entityName
+        entityName,
       );
     });
     return fields;
@@ -145,20 +159,25 @@ class GenerateTypes {
   generate() {
     this.entities.map(entity => {
       this.distributedSchema.type(entity.name, {
-        name: entity.name.replace(/[^\w\s]/gi, ''),
-        fields: () => this.fieldsFromParameters(
-          Object.keys(entity.properties).map(key => ({
-            ...entity.properties[key],
-            name: key,
-          })),
-          entity.name
-        ),
+        name: entity.name,
+        fields: () =>
+          this.fieldsFromParameters(
+            Object.keys(entity.properties).map(key => ({
+              ...entity.properties[key],
+              name: key,
+            })),
+            entity.name,
+          ),
       });
     });
   }
 }
 
-export default (entities: Array<Entity>, distributedSchema: DistributedSchema, graphqlArguments: EntityArguments) => {
-  (new GenerateTypes(distributedSchema, graphqlArguments, entities)).generate();
+export default (
+  entities: Array<Entity>,
+  distributedSchema: DistributedSchema,
+  graphqlArguments: EntityArguments,
+) => {
+  new GenerateTypes(distributedSchema, graphqlArguments, entities).generate();
   return distributedSchema;
-}
+};

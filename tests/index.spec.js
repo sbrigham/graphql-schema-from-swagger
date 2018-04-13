@@ -16,11 +16,11 @@ import {
 import SwaggerParser from '../src/utils/swagger-parser';
 import blogSwaggerJson from './example/data/api-blog.swagger';
 import accountSwaggerJson from './example/data/api-account.swagger';
-import noOrphanedTypes from './example/data/special-cases/should_not_include_orphaned_types';
 import listResultDirectlyOnEndpoint from './example/data/special-cases/should_handle_list_results_directly_on_endpoint';
 import onlyListEndpointJson from './example/data/special-cases/should_handle_having_only_a_list_endpoint_for_an_entity';
 import enumsFromParams from './example/data/special-cases/should_handle_creating_enums_from_parameters';
 import nonLetterStrip from './example/data/special-cases/should_strip_non_letter_characters_on_entities';
+import petstore from './example/data/special-cases/should_work_with_petstore';
 
 declare var describe: any;
 declare var it: any;
@@ -302,6 +302,17 @@ describe('Integration Tests', () => {
         },
       ], { entityWhiteList: ['Blog'] });
     });
+
+    it('Should work with petstore', () => {
+      var result = schemaFromMultiple([
+        {
+          swaggerJson: petstore,
+          options: {
+            apiResolver: () => {}
+          }
+        }
+      ]);
+    });
   });
 });
 
@@ -421,15 +432,6 @@ describe('Unit Tests', () => {
         expect(postEntity.relationships.comments.isList).toBe(true);
         expect(postEntity.relationships.createdBy.name).toBe('Account');
         expect(postEntity.relationships.createdBy.isList).toBe(false);
-      });
-
-      it('Does not include orphaned types', () => {
-        var apiResolver = () => {};
-        const parser = new SwaggerParser(noOrphanedTypes, { apiResolver });
-        const entities = parser.getEntities();
-
-        expect(entities.some(e => e.name === 'Account')).toBe(true)
-        expect(entities.some(e => e.name === 'OrphanedType')).toBe(false)
       });
 
       it('Should handle having only a list endpoint for an entity', () => {

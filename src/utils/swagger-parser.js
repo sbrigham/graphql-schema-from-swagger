@@ -164,10 +164,13 @@ export default class SwaggerParser {
     if (listEndpoint) return listEndpoint;
 
     const parentEntityName = this.parentForEntity(rawEntityName, true);
+
     if (parentEntityName) {
       const parentProperties = this.swaggerJson.definitions[parentEntityName]
         .properties;
+
       const parentEntityEndpoint = this.endpointForEntity(parentEntityName);
+
       Object.keys(parentProperties).map(key => {
         if (
           parentEntityEndpoint &&
@@ -297,7 +300,12 @@ export default class SwaggerParser {
 
     const fullEntityListResultNames = entities.reduce((acc, e) => {
       if (e.endpoints.list && e.endpoints.list.listEntityName) {
-        acc.push(e.endpoints.list.listEntityName);
+        const listEntityName = e.endpoints.list.listEntityName;
+        const listEntity = entities.find(e => e.name === listEntityName);
+        if(listEntity && listEntity.endpoints && listEntity.endpoints.list && listEntity.endpoints.isFullEntity) {
+          return acc;
+        }
+        acc.push(listEntityName);
       }
       return acc;
     }, []);
@@ -315,20 +323,6 @@ export default class SwaggerParser {
         };
       }
       return e;
-    });
-
-    const usedEntities = [];
-    entities.map(e => {
-      if (e.endpoints.single || e.endpoints.list) {
-        usedEntities.push(e.name);
-      }
-      if (e.endpoints.list && e.endpoints.list.listEntityName) {
-        usedEntities.push(e.endpoints.list.listEntityName);
-      }
-
-      Object.keys(e.relationships).map(key => {
-        usedEntities.push(e.relationships[key].name);
-      });
     });
 
     // filter whitelist
@@ -390,9 +384,6 @@ export default class SwaggerParser {
           };
         });
     }
-
-    // filter out unused entities
-    entities = entities.filter(e => usedEntities.includes(e.name));
 
     return entities;
   }
