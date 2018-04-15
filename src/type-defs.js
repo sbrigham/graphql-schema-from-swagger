@@ -1,5 +1,5 @@
 // @flow
-import { type Entity } from './utils/swagger-parser';
+import { type Entity } from './swagger-parser';
 
 import DistributedSchema from './utils/distributed-schema';
 import buildArguments from './builders/build-arguments';

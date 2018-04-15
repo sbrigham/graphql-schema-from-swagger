@@ -13,7 +13,8 @@ import {
   generateTypes,
   schemaFromMultiple,
 } from '../src/index';
-import SwaggerParser from '../src/utils/swagger-parser';
+import resolverRelationships from '../src/swagger-parser/resolver-relationships';
+import SwaggerParser from '../src/swagger-parser';
 import blogSwaggerJson from './example/data/api-blog.swagger';
 import accountSwaggerJson from './example/data/api-account.swagger';
 import listResultDirectlyOnEndpoint from './example/data/special-cases/should_handle_list_results_directly_on_endpoint';
@@ -63,6 +64,14 @@ describe('Integration Tests', () => {
       expect(typeof resolvers.Comment).toBe('object');
       expect(typeof resolvers.Post.comments).toBe('function');
       expect(typeof resolvers.Blog.posts).toBe('function');
+    });
+
+    it('Does does not have resolvers for fields not associated with an endpoint', () => {
+      var resolvers = generateResolvers(petstore, {
+        apiResolver: () => {},
+      });
+      expect(resolvers).toHaveProperty('Pet');
+      expect(resolvers.Pet.tags).toBe(undefined);
     });
   });
 
@@ -218,6 +227,14 @@ describe('Integration Tests', () => {
       const visibilities = types.getType('Visibilities');
       expect(typeof visibilities).toBe('object');
     });
+
+    it('Should work with petstore', () => {
+      var result = generateTypes(petstore, {
+        apiResolver: () => {}
+      });
+      const pet = result.getType('Pet');
+      expect(pet.getFields().tags.type.toString()).toBe('[Tag]');
+    });
   });
 
   describe('schemaFromMultiple', () => {
@@ -301,17 +318,6 @@ describe('Integration Tests', () => {
           },
         },
       ], { entityWhiteList: ['Blog'] });
-    });
-
-    it('Should work with petstore', () => {
-      var result = schemaFromMultiple([
-        {
-          swaggerJson: petstore,
-          options: {
-            apiResolver: () => {}
-          }
-        }
-      ]);
     });
   });
 });

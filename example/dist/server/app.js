@@ -101,10 +101,10 @@ function setRawUrl({
   };
 }
 
-app.use((0, _morgan2.default)(function (tokens, req, res) {
-  const response = [tokens.method(req, res), tokens.url(req, res), tokens.status(req, res), tokens['response-time'](req, res), 'ms'].join(' ');
-
-  return response;
+app.use((0, _morgan2.default)('dev', {
+  skip: function (req, res) {
+    return res.statusCode < 400;
+  }
 }));
 
 app.get('/', (0, _apolloServerExpress.graphiqlExpress)({ endpointURL: '/graphql' }));
@@ -138,11 +138,15 @@ app.use('/graphql', _bodyParser2.default.json(), (0, _apolloServerExpress.graphq
           'fieldName': fieldName
         });
 
-        return await getRequest(result.url, parameters);
+        const response = await getRequest(result.url, parameters);
+        console.log(response);
+        return response;
       }
     }
   }]);
+  console.log('AFTER');
 
+  console.log(graphQlSchema);
   const schema = (0, _graphqlTools.makeExecutableSchema)(graphQlSchema);
   return {
     schema,

@@ -3,7 +3,7 @@ import Pluralize from 'pluralize';
 import {
   GraphQLList,
 } from 'graphql';
-import { Entity } from '../utils/swagger-parser';
+import { Entity } from '../swagger-parser';
 import DistributedSchema from '../utils/distributed-schema';
 import { type EntityArguments } from '../builders/build-arguments';
 

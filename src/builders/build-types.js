@@ -12,7 +12,7 @@ import {
 
 import { toPrimitiveType, isPrimitiveType } from '../utils/to-graphql-field';
 import DistributedSchema from '../utils/distributed-schema';
-import { Entity } from '../utils/swagger-parser';
+import { Entity } from '../swagger-parser';
 import { type EntityArguments } from '../builders/build-arguments';
 
 function capFirstLetter(string) {

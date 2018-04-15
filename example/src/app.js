@@ -71,18 +71,9 @@ function setRawUrl({
   };
 }
 
-app.use(
-  logger(function (tokens, req, res) {
-    const response = [
-      tokens.method(req, res),
-      tokens.url(req, res),
-      tokens.status(req, res),
-      tokens['response-time'](req, res), 'ms'
-    ].join(' ');
-
-    return response;
-  })
-);
+app.use(logger('dev', {
+  skip: function (req, res) { return res.statusCode < 400 }
+}))
 
 app.get('/', graphiqlExpress({ endpointURL: '/graphql' }));
 
@@ -110,21 +101,14 @@ app.use(
               parent,
             });
 
-            console.log({
-              'type': type,
-              'parent': parent,
-              'parentType': parentType,
-              'parameters': parameters,
-              'rawUrl': rawUrl,
-              'fieldName': fieldName,
-            });
-
+            if (fieldName === 'pets' && parameters.status) {
+              parameters.status = parameters.status.join(', ');
+            }
             return await getRequest(result.url, parameters);
           }
         },
       }
     ]);
-
     const schema = makeExecutableSchema(graphQlSchema);
     return {
       schema,

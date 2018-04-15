@@ -1,5 +1,5 @@
 // @flow
-import { type Entity } from '../utils/swagger-parser';
+import { type Entity } from '../swagger-parser';
 import { toPrimitiveType } from '../utils/to-graphql-field';
 
 import {

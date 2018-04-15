@@ -1,7 +1,7 @@
 // @flow
 import toCamelCase from 'camelcase';
 import Pluralize from 'pluralize';
-import { type Entity } from './utils/swagger-parser';
+import { type Entity } from './swagger-parser';
 
 function resolverFuction(apiResolver: Function, rawUrl: string, parentType: string, type: string, fieldName: string) {
   return async (parent, parameters, context) => {
@@ -28,8 +28,10 @@ export function genResolvers(entities: Array<Entity>) {
       if (!fullEntity) throw new Error(`Relationship ${e.relationships[current].name} was not found for ${e.name}`);
 
       const endpoint = fullEntity.endpoints[entity.isList ? 'list' : 'single'];
+
       if (!endpoint) return acc;
 
+      if(endpoint.listEntityName && fullEntity.endpoints.list.isFullEntity) return acc;
 
       acc[current] = resolverFuction(
         fullEntity.apiResolver,

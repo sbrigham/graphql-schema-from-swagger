@@ -7,7 +7,7 @@ import SwaggerParser, {
   type SwaggerParserOptions,
   type RootSwaggerParserOptions,
   type Entity
-} from './utils/swagger-parser';
+} from './swagger-parser';
 
 /**
  * Returns an array of objects where each object has

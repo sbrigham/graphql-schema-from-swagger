@@ -109,36 +109,6 @@ export default {
         security: [{ petstore_auth: ['write:pets', 'read:pets'] }],
       },
     },
-    '/pet/findByTags': {
-      get: {
-        tags: ['pet'],
-        summary: 'Finds Pets by tags',
-        description:
-          'Muliple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.',
-        operationId: 'findPetsByTags',
-        produces: ['application/xml', 'application/json'],
-        parameters: [
-          {
-            name: 'tags',
-            in: 'query',
-            description: 'Tags to filter by',
-            required: true,
-            type: 'array',
-            items: { type: 'string' },
-            collectionFormat: 'multi',
-          },
-        ],
-        responses: {
-          '200': {
-            description: 'successful operation',
-            schema: { type: 'array', items: { $ref: '#/definitions/Pet' } },
-          },
-          '400': { description: 'Invalid tag value' },
-        },
-        security: [{ petstore_auth: ['write:pets', 'read:pets'] }],
-        deprecated: true,
-      },
-    },
     '/pet/{petId}': {
       get: {
         tags: ['pet'],
